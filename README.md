@@ -1,6 +1,6 @@
 # easyScreenShot
-简单干净快速的截图工具
-
+* 简单干净快速的截图工具, 无界面, 运行即截图
+* ![example](https://github.com/shuoGG1239/EasyScreenShot/blob/master/example.jpg)
 
 # 使用方式
 * 运行`main.py`直接开启区域截图, 截完图自动保存到桌面, 然后退出进程
