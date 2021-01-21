@@ -1,6 +1,13 @@
-from PyQt5.QtCore import Qt, qAbs, QRect
+import win32api
+import win32clipboard
+import win32con
+
+from PyQt5.QtCore import Qt, qAbs, QRect, QByteArray, QBuffer, QIODevice
 from PyQt5.QtGui import QGuiApplication, QColor, QPen, QPainter
 from PyQt5.QtWidgets import QWidget, QApplication
+
+# 0:保存图片到桌面 1:复制到剪贴板 2:保存图片并复制到剪贴板
+RUN_MODE = 2
 
 
 # 暂时仅支持windows
@@ -56,7 +63,7 @@ class CaptureScreen(QWidget):
 
     def mouseDoubleClickEvent(self, event):
         if self.capture_pixmap is not None:
-            self.save_image(self.capture_pixmap)
+            self.handle_image(self.capture_pixmap)
             self.close()
 
     def paintEvent(self, event):
@@ -76,7 +83,7 @@ class CaptureScreen(QWidget):
         if event.key() == Qt.Key_Escape:
             self.close()
         if event.key() == Qt.Key_Return or event.key() == Qt.Key_Enter:
-            self.save_image(self.capture_pixmap)
+            self.handle_image(self.capture_pixmap)
             self.close()
 
     def get_rect(self, beginPoint, endPoint):
@@ -93,6 +100,15 @@ class CaptureScreen(QWidget):
             selected_rect.setHeight(1)
         return selected_rect
 
+    def handle_image(self, pixmap):
+        if RUN_MODE == 0:
+            self.save_image(pixmap)
+        if RUN_MODE == 1:
+            self.paste_on_clipboard(pixmap)
+        if RUN_MODE == 2:
+            self.save_image(pixmap)
+            self.paste_on_clipboard(pixmap)
+
     def save_image(self, pixmap):
         import os
         import datetime
@@ -102,8 +118,23 @@ class CaptureScreen(QWidget):
         pixmap.save(p, 'jpg')
 
     def get_desktop_path(self):
-        import win32api, win32con
         key = win32api.RegOpenKey(win32con.HKEY_CURRENT_USER,
                                   r'Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders', 0,
                                   win32con.KEY_READ)
         return win32api.RegQueryValueEx(key, 'Desktop')[0]
+
+    def paste_on_clipboard(self, pixmap):
+        ba = QByteArray()
+        buff = QBuffer(ba)
+        buff.open(QIODevice.WriteOnly)
+        pixmap.save(buff, "bmp")
+        pixmap_bytes = ba.data()
+        self.set_clipboard_img(pixmap_bytes)
+        print(len(pixmap_bytes))
+
+    def set_clipboard_img(self, img_bytes):
+        win32clipboard.OpenClipboard()
+        win32clipboard.EmptyClipboard()
+        # BMP前14位为header,须截掉否则很多软件识别不出
+        win32clipboard.SetClipboardData(win32con.CF_DIB, img_bytes[14:])
+        win32clipboard.CloseClipboard()
